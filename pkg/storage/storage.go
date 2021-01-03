@@ -4,6 +4,7 @@ package storage
 // in memory or an external database
 type DB interface {
 	Connect() error
+	Store(key, data string) error
 }
 
 const (

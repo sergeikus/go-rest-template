@@ -62,6 +62,7 @@ func main() {
 
 	// Set handlers
 	http.HandleFunc("/api/data/get", api.GetKey)
+	http.HandleFunc("/api/data/store", api.AddKey)
 
 	if c.TLS {
 		log.Printf("Starting HTTPS server")
