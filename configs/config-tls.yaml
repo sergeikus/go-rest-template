@@ -1,0 +1,8 @@
+# Enables TLS [Required]
+tls: true
+# Sets listening port [Required]
+port: 8443
+# TLS certificate path [Require in case 'tls' is true]
+tlsCertPath: tls.pem
+# TLS key path [Required in case 'tls' is true]
+tlcKeyPath: tls.key

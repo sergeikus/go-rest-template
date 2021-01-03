@@ -1,0 +1,5 @@
+# Enables TLS [Required]
+tls: false
+# Sets listening port [Required]
+port: 8080
+databaseType: "in-memory"
