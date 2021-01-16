@@ -8,13 +8,14 @@ COPY ./go.sum /server/go.sum
 COPY ./go.mod /server/go.mod
 COPY ./Makefile /server/Makefile
 RUN apk add make
-RUN make binary-locally
+RUN apk add bash
+RUN make server-binary-locally
 
 # Create image
 FROM alpine:latest as prod
+RUN apk add bash
 RUN apk add make
 WORKDIR /server
 COPY --from=build /server/bin/. /server/bin/.
 COPY ./configs /server/configs
-EXPOSE 8443
 CMD [ "./bin/go-server", "--config", "configs/config.yaml" ]

@@ -1,5 +1,19 @@
-# Enables TLS [Required]
+# [Required] Enables TLS 
 tls: false
-# Sets listening port [Required]
+# [Required] Sets listening port
 port: 8080
-databaseType: "in-memory"
+# [Required] Defines database fields
+database:
+  # [Required] Sets database type, accepted values are 'in-memory' and 'postgres' 
+  type: postgres
+  # Next fields are used in case when database type is NOT 'in-memory'
+  # [Optional] Sets database host address (connect to)
+  host: localhost
+  # [Optional] Sets database port (connect to)
+  port: 5432
+  # [Optional] Sets database username
+  username: admin
+  # [Optional] Sets database password
+  password: adminPassword
+  # [Optional] Sets database name
+  name: database

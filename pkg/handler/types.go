@@ -11,16 +11,20 @@ type API struct {
 	DB storage.DB
 }
 
-// KeyAdditionRequest represents for a key
-type KeyAdditionRequest struct {
-	Key  string `json:"key"`
+const (
+	// MsgStatusOK represents a success string message
+	MsgStatusOK = "{\"status\": \"OK\"}"
+)
+
+// DataAdditionRequest represents for a key
+type DataAdditionRequest struct {
 	Data string `json:"data"`
 }
 
 // Validate performs request validation
-func (kar *KeyAdditionRequest) Validate() error {
-	if len(kar.Key) == 0 {
-		return fmt.Errorf("key must be non-empty string")
+func (dar *DataAdditionRequest) Validate() error {
+	if len(dar.Data) == 0 {
+		return fmt.Errorf("data to be added must be non-empty string")
 	}
 	return nil
 }

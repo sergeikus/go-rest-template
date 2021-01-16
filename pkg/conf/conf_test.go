@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_Validate(t *testing.T) {
+func Test_Conf_Validate(t *testing.T) {
 	tt := []struct {
 		name     string
 		c        Conf
@@ -27,20 +27,20 @@ func Test_Validate(t *testing.T) {
 			expected: "port can't be 0 (verify that it's specified in the configuration)",
 		},
 		{
-			name: "Database type is not provided (tls disabled)",
+			name: "Database is not provided (tls disabled)",
 			c: Conf{
 				TLS:  false,
 				Port: 8080,
 			},
 			fail:     true,
-			expected: "database type must be provided",
+			expected: "database configuration validation failed:",
 		},
 		{
 			name: "Valid conf (tls disabled)",
 			c: Conf{
-				TLS:          false,
-				Port:         8080,
-				DatabaseType: "test",
+				TLS:      false,
+				Port:     8080,
+				Database: Database{Type: "in-memory"},
 			},
 			fail: false,
 		},
@@ -64,11 +64,11 @@ func Test_Validate(t *testing.T) {
 		{
 			name: "Valid conf (tls enabled)",
 			c: Conf{
-				TLS:          false,
-				TLSKeyPath:   "test",
-				TLSCertPath:  "test",
-				Port:         8080,
-				DatabaseType: "test",
+				TLS:         false,
+				TLSKeyPath:  "test",
+				TLSCertPath: "test",
+				Port:        8080,
+				Database:    Database{Type: "in-memory"},
 			},
 			fail: false,
 		},
@@ -77,6 +77,111 @@ func Test_Validate(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			err := tc.c.Validate()
+			if tc.fail {
+				require.NotNil(t, err, "expected to see an error, but got nil")
+				require.Contains(t, err.Error(), tc.expected, "expected to see a different error")
+			} else {
+				require.NoError(t, err, "expected to get no error, but got: %v", err)
+			}
+		})
+	}
+}
+
+func Test_Database_Validate(t *testing.T) {
+	tt := []struct {
+		name     string
+		d        Database
+		fail     bool
+		expected string
+	}{
+		{
+			name:     "Empty type",
+			d:        Database{},
+			fail:     true,
+			expected: "database type musy be non-empty string",
+		},
+		{
+			name: "Unknown type",
+			d: Database{
+				Type: "test",
+			},
+			fail:     true,
+			expected: "unsupported database type:",
+		},
+		{
+			name: "Valid database (in-memory)",
+			d: Database{
+				Type: "in-memory",
+			},
+			fail: false,
+		},
+		{
+			name: "Host is empty (not in-memory)",
+			d: Database{
+				Type: "postgres",
+			},
+			fail:     true,
+			expected: "host must be non-empty string",
+		},
+		{
+			name: "Port is 0 (not in-memory)",
+			d: Database{
+				Type: "postgres",
+				Host: "test",
+			},
+			fail:     true,
+			expected: "port must be not 0",
+		},
+		{
+			name: "Username is empty (not in-memory)",
+			d: Database{
+				Type: "postgres",
+				Host: "test",
+				Port: 8443,
+			},
+			fail:     true,
+			expected: "username must be non-empty string",
+		},
+		{
+			name: "Password is empty (not in-memory)",
+			d: Database{
+				Type:     "postgres",
+				Host:     "test",
+				Port:     8443,
+				Username: "test",
+			},
+			fail:     true,
+			expected: "password must be non-empty string",
+		},
+		{
+			name: "Name is empty (not in-memory)",
+			d: Database{
+				Type:     "postgres",
+				Host:     "test",
+				Port:     8443,
+				Username: "test",
+				Password: "test",
+			},
+			fail:     true,
+			expected: "database name must be non-empty string",
+		},
+		{
+			name: "Valid database (not in-memory)",
+			d: Database{
+				Type:     "postgres",
+				Host:     "test",
+				Port:     8443,
+				Username: "test",
+				Password: "test",
+				Name:     "test",
+			},
+			fail: false,
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			err := tc.d.Validate()
 			if tc.fail {
 				require.NotNil(t, err, "expected to see an error, but got nil")
 				require.Contains(t, err.Error(), tc.expected, "expected to see a different error")

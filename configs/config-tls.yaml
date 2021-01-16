@@ -1,8 +1,10 @@
-# Enables TLS [Required]
+# [Required] Enables TLS 
 tls: true
-# Sets listening port [Required]
+# [Required] Sets listening port
 port: 8443
-# TLS certificate path [Require in case 'tls' is true]
+# [Required in case 'tls' is true] TLS certificate path
+# NB! Path must be relative to THIS configuration file
 tlsCertPath: tls.pem
-# TLS key path [Required in case 'tls' is true]
+# [Required in case 'tls' is true] TLS key path
+# NB! Path must be relative to THIS configuration file
 tlcKeyPath: tls.key

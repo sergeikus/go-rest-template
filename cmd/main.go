@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/sergeikus/go-rest-template/pkg/conf"
 	"github.com/sergeikus/go-rest-template/pkg/handler"
@@ -16,10 +17,11 @@ import (
 
 func main() {
 	flag.Usage = func() {
-		fmt.Fprintln(os.Stderr, "usage:", os.Args[0], `[--config <path>] server`)
+		fmt.Fprintln(os.Stderr, "usage:", os.Args[0], `[--config <path>]
+		`)
 		flag.PrintDefaults()
 	}
-	configuration := flag.String("config", "../configs/config.yaml", "Configuration file in YAML format")
+	configuration := flag.String("config", "../configs/config.yaml", "Path to server configuration (supported format is YAML)")
 	flag.Parse()
 
 	c, err := conf.ReadConf(*configuration)
@@ -46,12 +48,25 @@ func main() {
 	}
 
 	log.Printf("Initializing storage...")
+	// This environmental variable will override configuration
+	inMemoryOverride := os.Getenv("DB_TYPE_INMEMORY")
+	if strings.ToLower(inMemoryOverride) == "true" {
+		c.Database.Type = "in-memory"
+	}
+
 	var api handler.API
-	switch c.DatabaseType {
+	log.Printf("Database type is: %s", c.Database.Type)
+	switch c.Database.Type {
 	case storage.DatabaseTypeInMemory:
 		api = handler.API{DB: &storage.InMemoryStorage{}}
+	case storage.DatabaseTypePostgre:
+		api = handler.API{
+			DB: storage.DefinePostgresStorage(
+				c.Database.Username, c.Database.Password, c.Database.Name, c.Database.Host, c.Database.Port,
+			),
+		}
 	default:
-		log.Fatalf("unsupported database type: '%s'", c.DatabaseType)
+		log.Fatalf("unsupported database type: '%s'", c.Database.Type)
 	}
 
 	log.Printf("Performing connection to database...")
@@ -59,10 +74,13 @@ func main() {
 		log.Fatalf("failed to connect to database: %v", err)
 	}
 	log.Printf("Successfully connected to database")
+	// Close connection when application shuts down
+	defer api.DB.Close()
 
 	// Set handlers
-	http.HandleFunc("/api/data/get", api.GetKey)
-	http.HandleFunc("/api/data/store", api.AddKey)
+	http.HandleFunc("/api/data/get", api.GetData)
+	http.HandleFunc("/api/data/get/all", api.GetAllData)
+	http.HandleFunc("/api/data/store", api.Store)
 
 	if c.TLS {
 		log.Printf("Starting HTTPS server")
