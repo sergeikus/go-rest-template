@@ -41,6 +41,12 @@ func Test_Conf_Validate(t *testing.T) {
 				TLS:      false,
 				Port:     8080,
 				Database: Database{Type: "in-memory"},
+				Authorization: Authorization{
+					Type:             "session",
+					SessionDuration:  10,
+					PBKDF2Iterations: 1,
+					PBKDF2KeyLenght:  1,
+				},
 			},
 			fail: false,
 		},
@@ -64,11 +70,17 @@ func Test_Conf_Validate(t *testing.T) {
 		{
 			name: "Valid conf (tls enabled)",
 			c: Conf{
-				TLS:         false,
+				TLS:         true,
 				TLSKeyPath:  "test",
 				TLSCertPath: "test",
 				Port:        8080,
 				Database:    Database{Type: "in-memory"},
+				Authorization: Authorization{
+					Type:             "session",
+					SessionDuration:  10,
+					PBKDF2Iterations: 1,
+					PBKDF2KeyLenght:  1,
+				},
 			},
 			fail: false,
 		},
@@ -182,6 +194,80 @@ func Test_Database_Validate(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			err := tc.d.Validate()
+			if tc.fail {
+				require.NotNil(t, err, "expected to see an error, but got nil")
+				require.Contains(t, err.Error(), tc.expected, "expected to see a different error")
+			} else {
+				require.NoError(t, err, "expected to get no error, but got: %v", err)
+			}
+		})
+	}
+}
+
+func Test_AuthorizationValidate(t *testing.T) {
+	tt := []struct {
+		name     string
+		a        Authorization
+		fail     bool
+		expected string
+	}{
+		{
+			name:     "Empty struct",
+			a:        Authorization{},
+			fail:     true,
+			expected: "authorization type must be provided",
+		},
+		{
+			name: "Unknown type",
+			a: Authorization{
+				Type: "TESTING",
+			},
+			fail:     true,
+			expected: "unknown authorization type:",
+		},
+		{
+			name: "Invalid session duration (session)",
+			a: Authorization{
+				Type:            "session",
+				SessionDuration: -1,
+			},
+			fail:     true,
+			expected: "session duration in 'session' type must be greater than 0",
+		},
+		{
+			name: "Invalid PBKDF2 iterations",
+			a: Authorization{
+				Type:            "session",
+				SessionDuration: 10,
+			},
+			fail:     true,
+			expected: "PBKDF2 hashing iterations count must be greater than 0",
+		},
+		{
+			name: "Invalid PBKDF2 key lenght",
+			a: Authorization{
+				Type:             "session",
+				SessionDuration:  10,
+				PBKDF2Iterations: 1,
+			},
+			fail:     true,
+			expected: "PBKDF2 key lenght must be greater than 0",
+		},
+		{
+			name: "Valid authorization configuration (session)",
+			a: Authorization{
+				Type:             "session",
+				SessionDuration:  10,
+				PBKDF2Iterations: 1,
+				PBKDF2KeyLenght:  1,
+			},
+			fail: false,
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			err := tc.a.Validate()
 			if tc.fail {
 				require.NotNil(t, err, "expected to see an error, but got nil")
 				require.Contains(t, err.Error(), tc.expected, "expected to see a different error")

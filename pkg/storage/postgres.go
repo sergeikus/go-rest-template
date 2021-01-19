@@ -11,7 +11,7 @@ import (
 // PostgresStorage represents a Postgres database
 type PostgresStorage struct {
 	DSN     string
-	PGXPool *pgxpool.Pool
+	pgxPool *pgxpool.Pool
 }
 
 // DefinePostgresStorage PostgresStorage fields
@@ -31,13 +31,13 @@ func (ps *PostgresStorage) Connect() error {
 	if err != nil {
 		return fmt.Errorf("failed to perform database connection to '%s': %v", ps.DSN, err)
 	}
-	ps.PGXPool = dbPool
+	ps.pgxPool = dbPool
 	return nil
 }
 
 // Close closes connection to the database
 func (ps *PostgresStorage) Close() {
-	ps.PGXPool.Close()
+	ps.pgxPool.Close()
 }
 
 // Store performs storage of data in database, returns stored data auto generated primary key
@@ -47,7 +47,7 @@ func (ps *PostgresStorage) Store(data string) (id int, err error) {
 	VALUES ($1)
 	RETURNING id
 	`
-	if err := ps.PGXPool.QueryRow(context.Background(), sql, data).Scan(&id); err != nil {
+	if err := ps.pgxPool.QueryRow(context.Background(), sql, data).Scan(&id); err != nil {
 		return id, fmt.Errorf("failed to store data: %v", err)
 	}
 	return id, nil
@@ -58,7 +58,7 @@ func (ps *PostgresStorage) GetAll() ([]types.Data, error) {
 	sql := `
 	SELECT * FROM data_table
 	`
-	rows, err := ps.PGXPool.Query(context.Background(), sql)
+	rows, err := ps.pgxPool.Query(context.Background(), sql)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get all data from table: %v", err)
 	}
@@ -84,8 +84,50 @@ func (ps *PostgresStorage) GetKey(key int) (types.Data, error) {
 	WHERE id=$1
 	`
 	var d types.Data
-	if err := ps.PGXPool.QueryRow(context.Background(), sql, key).Scan(&d.ID, &d.String); err != nil {
+	if err := ps.pgxPool.QueryRow(context.Background(), sql, key).Scan(&d.ID, &d.String); err != nil {
 		return d, fmt.Errorf("failed to query data for '%d' key: %v", key, err)
 	}
 	return d, nil
+}
+
+// VerifyUserCredentials performs user log in verification
+func (ps *PostgresStorage) VerifyUserCredentials(username, passwordHash string) (types.User, error) {
+	sql := `
+	SELECT * FROM users 
+	WHERE username=$1 AND password_hash=$2
+	`
+	var u types.User
+	if err := ps.pgxPool.QueryRow(context.Background(), sql, username, passwordHash).Scan(&u.ID, &u.Username, &u.Fullname, &u.PasswordSalt, &u.PasswordHash, &u.Email, &u.IsDisabled); err != nil {
+		return u, fmt.Errorf("failed to get user from database: %v", err)
+	}
+
+	return u, nil
+}
+
+// GetUserSalt returns user password salt
+func (ps *PostgresStorage) GetUserSalt(username string) (salt string, err error) {
+	sql := `
+	SELECT password_salt FROM users
+	WHERE username=$1
+	`
+	if err := ps.pgxPool.QueryRow(context.Background(), sql, username).Scan(&salt); err != nil {
+		return salt, err
+	}
+	return salt, nil
+}
+
+// RegisterUser registers user in postgres
+func (ps *PostgresStorage) RegisterUser(user types.User) (id int, err error) {
+	sql := `
+	INSERT INTO users (username, fullname, password_salt, password_hash, email, is_disabled)
+	VALUES ($1, $2, $3, $4, $5, $6)
+	RETURNING id
+	`
+	if err := ps.pgxPool.QueryRow(
+		context.Background(), sql,
+		user.Username, user.Fullname, user.PasswordSalt,
+		user.PasswordHash, user.Email, user.IsDisabled).Scan(&id); err != nil {
+		return id, err
+	}
+	return id, nil
 }

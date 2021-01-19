@@ -1,7 +1,13 @@
 # [Required] Enables TLS 
-tls: false
+tls: true
+# [Required in case 'tls' is true] TLS certificate path
+# NB! Path must be relative to THIS configuration file
+tlsCertPath: tls.crt
+# [Required in case 'tls' is true] TLS key path
+# NB! Path must be relative to THIS configuration file
+tlsKeyPath: tls.key
 # [Required] Sets listening port
-port: 8080
+port: 8443
 # [Required] Defines database fields
 database:
   # [Required] Sets database type, accepted values are 'in-memory' and 'postgres' 
@@ -17,3 +23,25 @@ database:
   password: adminPassword
   # [Optional] Sets database name
   name: database
+
+# [Required] Defines authorization configuration
+authorization:
+  # [Required] Sets authorization type, currently supported 1 type:
+  # 1. 'session' - where server holds each logged in session in memory and 
+  #    sets session ID in cookies in order for client to stay logged in.
+  #    NB! If TLS is disabled cookie will not be sent to the client
+  #        as cookie is set with 'Secure' boolean.
+  type: session
+  # [Required] Sets session duration in seconds must be a positive number
+  # If authorization type is 'session' keep in mind that session duration
+  # sets client inactivity counter. In other words if client is inactive 
+  # for 'n' seconds, session is marked as inactive and session is deleted
+  # on server.
+  sessionDuration: 10
+  # [Required] Sets PBKDF2 number of hashing iterations
+  # Suggested to set at least 100000 iterations in some articles even
+  # 150000.
+  pbkdf2Iterations: 150000
+  # [Required] Sets PBKDF2 key lenght
+  # Suggested to set at least 32
+  pbkdf2KeyLenght: 64

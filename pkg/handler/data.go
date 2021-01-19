@@ -17,18 +17,18 @@ func (api *API) GetData(w http.ResponseWriter, r *http.Request) {
 		tm := time.Now()
 		keyString := r.URL.Query().Get("key")
 		if len(keyString) == 0 {
-			fail(w, getTag, fmt.Errorf("key must be provided"), 500)
+			fail(w, getTag, fmt.Errorf("key must be provided"), http.StatusInternalServerError)
 			return
 		}
 
 		key, err := strconv.Atoi(keyString)
 		if err != nil {
-			fail(w, getTag, fmt.Errorf("key must be an integer: %v", err), 500)
+			fail(w, getTag, fmt.Errorf("key must be an integer: %v", err), http.StatusInternalServerError)
 			return
 		}
 		d, err := api.DB.GetKey(key)
 		if err != nil {
-			fail(w, getTag, fmt.Errorf("failed to get data for '%d' key: %v", key, err), 500)
+			fail(w, getTag, fmt.Errorf("failed to get data for '%d' key: %v", key, err), http.StatusInternalServerError)
 			return
 		}
 
@@ -45,7 +45,7 @@ func (api *API) GetAllData(w http.ResponseWriter, r *http.Request) {
 
 		data, err := api.DB.GetAll()
 		if err != nil {
-			fail(w, getAllTag, fmt.Errorf("failed to get all data from 'data_table': %v", err), 500)
+			fail(w, getAllTag, fmt.Errorf("failed to get all data from 'data_table': %v", err), http.StatusInternalServerError)
 			return
 		}
 		writeReponseObject(w, data, getAllTag, fmt.Sprintf("Successfully got all data from 'data_table', got %d rows, action took: %v", len(data), time.Since(tm)))
@@ -60,17 +60,17 @@ func (api *API) Store(w http.ResponseWriter, r *http.Request) {
 		decoder := json.NewDecoder(r.Body)
 		var dar DataAdditionRequest
 		if err := decoder.Decode(&dar); err != nil {
-			fail(w, storeTag, fmt.Errorf("error while decoding body request: %v", err), 500)
+			fail(w, storeTag, fmt.Errorf("error while decoding body request: %v", err), http.StatusInternalServerError)
 			return
 		}
 
 		if err := dar.Validate(); err != nil {
-			fail(w, storeTag, fmt.Errorf("validation of data addition request failed: %v", err), 500)
+			fail(w, storeTag, fmt.Errorf("validation of data addition request failed: %v", err), http.StatusInternalServerError)
 			return
 		}
 
 		if _, err := api.DB.Store(dar.Data); err != nil {
-			fail(w, storeTag, fmt.Errorf("failed to store data: %v", err), 500)
+			fail(w, storeTag, fmt.Errorf("failed to store data: %v", err), http.StatusInternalServerError)
 			return
 		}
 
@@ -85,7 +85,7 @@ func fail(w http.ResponseWriter, tag string, err error, code int) {
 
 func writeResponseString(w http.ResponseWriter, msg, logTag, logMsg string) {
 	if _, err := w.Write([]byte(msg)); err != nil {
-		fail(w, logTag, fmt.Errorf("failed to write response: %v", err), 500)
+		fail(w, logTag, fmt.Errorf("failed to write response: %v", err), http.StatusInternalServerError)
 		return
 	}
 	if len(logMsg) != 0 {
@@ -95,7 +95,7 @@ func writeResponseString(w http.ResponseWriter, msg, logTag, logMsg string) {
 
 func writeReponseObject(w http.ResponseWriter, obj interface{}, logTag, logMsg string) {
 	if err := json.NewEncoder(w).Encode(&obj); err != nil {
-		fail(w, logTag, fmt.Errorf("failed to encode response: %v", err), 500)
+		fail(w, logTag, fmt.Errorf("failed to encode response: %v", err), http.StatusInternalServerError)
 		return
 	}
 	if len(logMsg) != 0 {

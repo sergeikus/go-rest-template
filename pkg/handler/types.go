@@ -1,14 +1,16 @@
 package handler
 
 import (
-	"fmt"
+	"errors"
 
+	"github.com/sergeikus/go-rest-template/pkg/auth"
 	"github.com/sergeikus/go-rest-template/pkg/storage"
 )
 
 // API is used to pass database interface to handlers
 type API struct {
-	DB storage.DB
+	DB   storage.DB
+	Auth auth.Auth
 }
 
 const (
@@ -21,10 +23,12 @@ type DataAdditionRequest struct {
 	Data string `json:"data"`
 }
 
+var errDataAdditionRequestNoData = errors.New("data to be added must be non-empty string")
+
 // Validate performs request validation
 func (dar *DataAdditionRequest) Validate() error {
 	if len(dar.Data) == 0 {
-		return fmt.Errorf("data to be added must be non-empty string")
+		return errDataAdditionRequestNoData
 	}
 	return nil
 }

@@ -4,7 +4,7 @@ tls: true
 port: 8443
 # [Required in case 'tls' is true] TLS certificate path
 # NB! Path must be relative to THIS configuration file
-tlsCertPath: tls.pem
+tlsCertPath: tls.crt
 # [Required in case 'tls' is true] TLS key path
 # NB! Path must be relative to THIS configuration file
-tlcKeyPath: tls.key
+tlsKeyPath: tls.key

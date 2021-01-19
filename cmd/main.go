@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/sergeikus/go-rest-template/pkg/auth"
 	"github.com/sergeikus/go-rest-template/pkg/conf"
 	"github.com/sergeikus/go-rest-template/pkg/handler"
 	"github.com/sergeikus/go-rest-template/pkg/storage"
@@ -53,20 +54,26 @@ func main() {
 	if strings.ToLower(inMemoryOverride) == "true" {
 		c.Database.Type = "in-memory"
 	}
-
-	var api handler.API
 	log.Printf("Database type is: %s", c.Database.Type)
+	var api handler.API
 	switch c.Database.Type {
 	case storage.DatabaseTypeInMemory:
-		api = handler.API{DB: &storage.InMemoryStorage{}}
+		api.DB = &storage.InMemoryStorage{}
 	case storage.DatabaseTypePostgre:
-		api = handler.API{
-			DB: storage.DefinePostgresStorage(
-				c.Database.Username, c.Database.Password, c.Database.Name, c.Database.Host, c.Database.Port,
-			),
-		}
+		api.DB = storage.DefinePostgresStorage(
+			c.Database.Username, c.Database.Password, c.Database.Name, c.Database.Host, c.Database.Port,
+		)
 	default:
 		log.Fatalf("unsupported database type: '%s'", c.Database.Type)
+	}
+
+	log.Printf("Initializing authorization...")
+	log.Printf("Authorization type is: %s", c.Authorization.Type)
+	switch c.Authorization.Type {
+	case auth.SSMType:
+		api.Auth = auth.DefineSSM(c.Authorization.SessionDuration, c.Authorization.PBKDF2Iterations, c.Authorization.PBKDF2KeyLenght)
+	default:
+		log.Fatalf("unsupported authorization type: '%s'", c.Authorization.Type)
 	}
 
 	log.Printf("Performing connection to database...")
@@ -77,10 +84,15 @@ func main() {
 	// Close connection when application shuts down
 	defer api.DB.Close()
 
-	// Set handlers
+	// Public endpoints
 	http.HandleFunc("/api/data/get", api.GetData)
 	http.HandleFunc("/api/data/get/all", api.GetAllData)
 	http.HandleFunc("/api/data/store", api.Store)
+	// Limited access endpoints
+	http.HandleFunc("/api/login", api.LogIn)
+	http.HandleFunc("/api/logout", api.Logout)
+	http.HandleFunc("/api/login/status", api.LogInStatus)
+	http.HandleFunc("/api/register/user", api.RegisterUser)
 
 	if c.TLS {
 		log.Printf("Starting HTTPS server")

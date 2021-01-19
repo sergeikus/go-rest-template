@@ -1,3 +1,8 @@
 tls: false
 port: 8080
 databaseType: in-memory
+authorization: 
+  type: session
+  sessionDuration: 10
+  pbkdf2Iterations: 1
+  pkbdf2KeyLenght: 1
