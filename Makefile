@@ -89,7 +89,7 @@ server-clean:
 
 test:
 	@echo "==========   Performing '${server-project-name}' unit testing with coverage report   =========="
-	docker build -f build/Dockerfile-test . -t ${server-project-name}-test
+	docker build -f build/test.Dockerfile . -t ${server-project-name}-test
 	- docker rmi -f `docker images -f "dangling=true" -q`
 	docker create -ti --name ${server-project-name}-test ${server-project-name}-test bash
 	docker cp ${server-project-name}-test:/server/coverage.html .
@@ -104,7 +104,7 @@ test-locally:
 
 database-build:
 	@echo "=====   Building '${server-project-name}' image   ====="
-	docker build -f build/database/Dockerfile-postgres . -t ${database-project-name}
+	docker build -f build/database/postgres.Dockerfile . -t ${database-project-name}
 	- docker rmi -f `docker images -f "dangling=true" -q`
 	@echo "=====   Image is created   ====="
 	@echo

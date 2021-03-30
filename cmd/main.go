@@ -64,7 +64,7 @@ func main() {
 			c.Database.Username, c.Database.Password, c.Database.Name, c.Database.Host, c.Database.Port,
 		)
 	default:
-		log.Fatalf("unsupported database type: '%s'", c.Database.Type)
+		log.Fatalf("Unsupported database type: '%s'", c.Database.Type)
 	}
 
 	log.Printf("Initializing authorization...")
@@ -73,7 +73,7 @@ func main() {
 	case auth.SSMType:
 		api.Auth = auth.DefineSSM(c.Authorization.SessionDuration, c.Authorization.PBKDF2Iterations, c.Authorization.PBKDF2KeyLenght)
 	default:
-		log.Fatalf("unsupported authorization type: '%s'", c.Authorization.Type)
+		log.Fatalf("Unsupported authorization type: '%s'", c.Authorization.Type)
 	}
 
 	log.Printf("Performing connection to database...")
@@ -105,5 +105,4 @@ func main() {
 			log.Fatalf("failed to initialize server: %v", err)
 		}
 	}
-
 }
