@@ -16,8 +16,14 @@ var SocketUpgrader = websocket.Upgrader{
 	WriteBufferSize: 1024,
 }
 
-var functions = map[string]func(in Inbound) Outbound{
-	TypeStatus: handleStatus,
+const (
+	TypeStatus      = "status"
+	TypeCreateArray = "create-array"
+)
+
+var functions = map[string]func(in Inbound) (Outbound, error){
+	TypeStatus:      handleStatus,
+	TypeCreateArray: handleCreateArray,
 }
 
 // ConnectionReader is a main function which handles websocket messaging
@@ -47,7 +53,12 @@ func ConnectionReader(conn *websocket.Conn) {
 			continue
 		}
 
-		out := function(in)
+		out, err := function(in)
+		if err != nil {
+			// Here we don't use fail as outbound message is already
+			// formatted correctly
+			log.Printf("[%s] %v", WS_TAG, err)
+		}
 
 		outBytes, err := json.Marshal(&out)
 		if err != nil {
@@ -63,7 +74,7 @@ func ConnectionReader(conn *websocket.Conn) {
 }
 
 func fail(conn *websocket.Conn, in Inbound, logError error, msgError Error) {
-	log.Printf("[%s] Error: %v", WS_TAG, logError)
+	log.Printf("[%s] %v", WS_TAG, logError)
 	out := Outbound{
 		ID:    in.ID,
 		Error: &msgError,

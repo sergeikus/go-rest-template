@@ -74,14 +74,52 @@ func TestSocketHandler(t *testing.T) {
 		expectedResponse Outbound
 	}{
 		{
-			name:             "Empty message",
-			inbound:          Inbound{},
-			expectedResponse: Outbound{Error: &UnknownMessageTypeErr},
+			name: "Empty message",
+			inbound: Inbound{
+				ID: "1",
+			},
+			expectedResponse: Outbound{
+				ID:    "1",
+				Error: &UnknownMessageTypeErr,
+			},
 		},
 		{
-			name:             "Status check",
-			inbound:          Inbound{Type: TypeStatus},
-			expectedResponse: Outbound{Data: "{\"status\":\"ok\"}"},
+			name: "Status check",
+			inbound: Inbound{
+				ID:   "1",
+				Type: TypeStatus,
+			},
+			expectedResponse: Outbound{
+				ID:   "1",
+				Data: "{\"status\":\"ok\"}",
+			},
+		},
+		{
+			name: "Create array check",
+			inbound: Inbound{
+				ID:   "1",
+				Type: TypeCreateArray,
+				Data: marshal(t,
+					CreateArrayRequest{
+						Number: 4,
+					}),
+			},
+			expectedResponse: Outbound{
+				ID:   "1",
+				Data: string(marshal(t, CreateArrayResponse{Numbers: []int{0, 1, 2, 3}})),
+			},
+		},
+		{
+			name: "Create array negative number",
+			inbound: Inbound{
+				ID:   "1",
+				Type: TypeCreateArray,
+				Data: marshal(t, CreateArrayRequest{Number: -10}),
+			},
+			expectedResponse: Outbound{
+				ID:    "1",
+				Error: &CreateArrayNegativeNumberErr,
+			},
 		},
 	}
 
