@@ -13,8 +13,6 @@ import (
 )
 
 func httpToWS(t *testing.T, u string) string {
-	t.Helper()
-
 	wsURL, err := url.Parse(u)
 	require.NoError(t, err, "URL parsing failed: %v", err)
 
@@ -29,8 +27,6 @@ func httpToWS(t *testing.T, u string) string {
 }
 
 func testWSServer(t *testing.T, h http.Handler) (*httptest.Server, *websocket.Conn) {
-	t.Helper()
-
 	s := httptest.NewServer(h)
 	wsURL := httpToWS(t, s.URL)
 
@@ -40,13 +36,10 @@ func testWSServer(t *testing.T, h http.Handler) (*httptest.Server, *websocket.Co
 }
 
 func sendMessage(t *testing.T, ws *websocket.Conn, msg []byte) {
-	t.Helper()
 	require.NoError(t, ws.WriteMessage(websocket.BinaryMessage, msg))
 }
 
 func receiveMessage(t *testing.T, ws *websocket.Conn) []byte {
-	t.Helper()
-
 	_, m, err := ws.ReadMessage()
 	require.NoError(t, err, "Failed to read message: %v", err)
 
@@ -83,7 +76,12 @@ func TestSocketHandler(t *testing.T) {
 		{
 			name:             "Empty message",
 			inbound:          Inbound{},
-			expectedResponse: Outbound{},
+			expectedResponse: Outbound{Error: &UnknownMessageTypeErr},
+		},
+		{
+			name:             "Status check",
+			inbound:          Inbound{Type: TypeStatus},
+			expectedResponse: Outbound{Data: "{\"status\":\"ok\"}"},
 		},
 	}
 

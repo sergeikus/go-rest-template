@@ -15,7 +15,7 @@ type Inbound struct {
 // Outbond defines data that will be sent back to the client.
 type Outbound struct {
 	ID    string `json:"id"`
-	Error string `json:"error"`
+	Error *Error `json:"error"`
 	Data  string `json:"data"`
 }
 
@@ -26,3 +26,7 @@ type Error struct {
 	Code    string `json:"code"`
 	Message string `json:"message"`
 }
+
+const (
+	TypeStatus = "status"
+)

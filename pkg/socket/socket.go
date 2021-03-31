@@ -10,11 +10,18 @@ import (
 
 const WS_TAG = "WebSocket"
 
+// SocketUpgrader is a websocket configuration.
 var SocketUpgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
 }
 
+var functions = map[string]func(in Inbound) Outbound{
+	TypeStatus: handleStatus,
+}
+
+// ConnectionReader is a main function which handles websocket messaging
+// and data transfer.
 func ConnectionReader(conn *websocket.Conn) {
 	for {
 		messageType, p, err := conn.ReadMessage()
@@ -24,41 +31,46 @@ func ConnectionReader(conn *websocket.Conn) {
 			return
 		}
 		if err != nil {
-			fail(conn, Inbound{}, fmt.Errorf("failed to read message from client via WS: %v", err))
+			fail(conn, Inbound{}, fmt.Errorf("failed to read message from client via WS: %v", err), InvalidMessageErr)
 			return
 		}
 
 		var in Inbound
 		if err := json.Unmarshal(p, &in); err != nil {
-			fail(conn, in, fmt.Errorf("failed to unmarshal message: %v", err))
+			fail(conn, in, fmt.Errorf("failed to unmarshal message: %v", err), InvalidMessageErr)
 			continue
 		}
-		log.Printf("Marshalled inbound: %#v", in)
 
-		out := Outbound{
-			ID: in.ID,
+		function, exist := functions[in.Type]
+		if !exist {
+			fail(conn, in, fmt.Errorf("unknown message type: '%s'", in.Type), UnknownMessageTypeErr)
+			continue
 		}
+
+		out := function(in)
+
 		outBytes, err := json.Marshal(&out)
 		if err != nil {
-			fail(conn, in, fmt.Errorf("failed to marshal outbound message: %v", err))
+			fail(conn, in, fmt.Errorf("failed to marshal outbound message: %v", err), InternalErrorMessageErr)
 			continue
 		}
+
 		if err := conn.WriteMessage(websocket.BinaryMessage, outBytes); err != nil {
-			fail(conn, in, fmt.Errorf("failed to write a response message: %v", err))
+			fail(conn, in, fmt.Errorf("failed to write a response message: %v", err), InternalErrorMessageErr)
 			continue
 		}
 	}
 }
 
-func fail(conn *websocket.Conn, in Inbound, err error) {
-	log.Printf("[%s] %v", WS_TAG, err)
+func fail(conn *websocket.Conn, in Inbound, logError error, msgError Error) {
+	log.Printf("[%s] Error: %v", WS_TAG, logError)
 	out := Outbound{
 		ID:    in.ID,
-		Error: err.Error(),
+		Error: &msgError,
 	}
-	outBytes, err := json.Marshal(&out)
-	if err != nil {
-		log.Printf("[%s] failed to marshal oubound error response: %v", WS_TAG, err)
+	outBytes, logError := json.Marshal(&out)
+	if logError != nil {
+		log.Printf("[%s] failed to marshal oubound error response: %v", WS_TAG, logError)
 		return
 	}
 	if err := conn.WriteMessage(websocket.BinaryMessage, outBytes); err != nil {
